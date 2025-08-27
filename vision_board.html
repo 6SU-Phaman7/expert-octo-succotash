@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision Board - Enhanced</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: #ffffff;
+            --foreground: #141414;
+            --primary: #1a1a1a;
+            --primary-foreground: #f8f8f8;
+            --secondary: #f2f2f2;
+            --secondary-foreground: #333333;
+            --muted: #f9f9f9;
+            --muted-foreground: #757575;
+            --border: #e0e0e0;
+            --accent: #4a90e2;
+            --success: #28a745;
+            --danger: #dc3545;
+        }
+        .dark {
+            --background: #1a1a1a;
+            --foreground: #f8f8f8;
+            --primary: #f8f8f8;
+            --primary-foreground: #1a1a1a;
+            --secondary: #2a2a2a;
+            --secondary-foreground: #e0e0e0;
+            --muted: #222222;
+            --muted-foreground: #a0a0a0;
+            --border: #3a3a3a;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: var(--background);
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 10;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay.visible { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: var(--background);
+            padding: 2rem; border-radius: 1rem; max-width: 90vw; max-height: 90vh;
+            display: flex; flex-direction: column; gap: 1rem;
+            transform: scale(0.95); transition: transform 0.3s;
+        }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+        #brainstorm-canvas { border: 1px solid var(--border); border-radius: 0.75rem; cursor: crosshair; }
+        .message-box {
+            position: fixed; top: 10%; left: 50%; transform: translate(-50%, -50%);
+            background-color: var(--background);
+            color: var(--foreground);
+            padding: 1.5rem 2rem; border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 1001; text-align: center; border: 1px solid var(--border);
+            opacity: 0; animation: fadeInOut 3s forwards;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -70%); }
+            15% { opacity: 1; transform: translate(-50%, -50%); }
+            85% { opacity: 1; transform: translate(-50%, -50%); }
+            100% { opacity: 0; transform: translate(-50%, -70%); }
+        }
+        .task-item { transition: background-color 0.2s; }
+        .task-item:hover { background-color: var(--muted); }
+        .task-item input:checked + label span { text-decoration: line-through; color: var(--muted-foreground); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .listening-indicator.active {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)]">
+    <div class="relative flex size-full min-h-screen flex-col group/design-root overflow-x-hidden">
+        <div class="layout-container flex h-full grow flex-col">
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[var(--border)] px-6 md:px-10 py-3">
+                <div class="flex items-center gap-4">
+                    <div class="size-5 text-[var(--primary)]"><i class="fa-solid fa-layer-group"></i></div>
+                    <h2 class="text-[var(--foreground)] text-lg font-bold leading-tight tracking-[-0.015em]">Vision Board</h2>
+                </div>
+                <div class="flex flex-1 justify-center items-center gap-4">
+                    <div class="dropdown relative">
+                        <button class="flex items-center gap-2 text-[var(--foreground)] font-semibold py-2 px-4 rounded-full hover:bg-[var(--secondary)] transition-colors">
+                            <span id="current-board-title">Personal</span>
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </button>
+                        <div id="boards-dropdown" class="dropdown-content mt-2">
+                            <!-- Dropdown items will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button id="mic-button" class="flex items-center justify-center size-10 rounded-full bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:bg-[var(--border)] transition-colors">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <div class="dropdown relative">
+                        <button class="flex items-center justify-center size-10 rounded-full bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:bg-[var(--border)] transition-colors">
+                            <i class="fa-solid fa-gear"></i>
+                        </button>
+                        <div class="dropdown-content right-0 mt-2">
+                            <div class="px-4 py-3">
+                                <p class="text-sm font-semibold">Theme</p>
+                                <div class="flex gap-2 mt-2">
+                                    <button id="light-mode-btn" class="flex-1 py-1 px-2 rounded-md border border-[var(--border)] text-sm">Light</button>
+                                    <button id="dark-mode-btn" class="flex-1 py-1 px-2 rounded-md border border-transparent text-sm">Dark</button>
+                                </div>
+                            </div>
+                            <div class="border-t border-[var(--border)]"></div>
+                             <a href="#" id="manage-notifications" class="block px-4 py-2 text-[var(--secondary-foreground)] hover:bg-[var(--secondary)]">Notifications</a>
+                        </div>
+                    </div>
+                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" style='background-image: url("https://placehold.co/100x100/e0e0e0/757575?text=U");'></div>
+                </div>
+            </header>
+            <main id="board-content" class="px-4 sm:px-10 md:px-20 lg:px-40 flex flex-1 justify-center py-8"></main>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // JavaScript code with improvements will be here
+    </script>
+</body>
+</html>
